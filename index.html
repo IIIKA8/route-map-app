@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карта маршрутов</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=4e27aa7d-f41c-4bab-b185-78dfb0c352c9" type="text/javascript"></script>
+</head>
+<body>
+    <h1>Карта маршрутов</h1>
+    <div id="map" style="width: 100%; height: 500px;"></div>
+    
+    <div class="controls">
+        <button id="refreshButton">Обновить</button>
+    </div>
+
+    <script>
+        let myMap;
+        let startPoint = null; // Начальная точка
+        let endPoint = null; // Конечная точка
+        let routeLine = null; // Линия маршрута
+
+        // Инициализация карты
+        ymaps.ready(init);
+        function init() {
+            myMap = new ymaps.Map("map", {
+                center: [59.9343, 30.3351], // Санкт-Петербург
+                zoom: 10
+            });
+
+            // Обработчик клика на карте
+            myMap.events.add('click', function (e) {
+                const coords = e.get('coords');
+                if (!startPoint) {
+                    startPoint = coords; // Устанавливаем начальную точку
+                    alert('Начальная точка установлена: ' + startPoint);
+                } else if (!endPoint) {
+                    endPoint = coords; // Устанавливаем конечную точку
+                    alert('Конечная точка установлена: ' + endPoint);
+                    drawRoute(startPoint, endPoint); // Прокладываем маршрут
+                } else {
+                    alert('Маршрут уже установлен. Нажмите "Обновить", чтобы начать заново.');
+                }
+            });
+
+            // Обработчик события для кнопки обновления
+            document.getElementById('refreshButton').onclick = function() {
+                location.reload(); // Обновление страницы
+            };
+        }
+
+        function drawRoute(start, end) {
+            if (routeLine) {
+                myMap.geoObjects.remove(routeLine); // Удаляем предыдущий маршрут
+            }
+
+            // Создаем маршрут
+            const multiRoute = new ymaps.multiRouter.MultiRoute({
+                referencePoints: [start, end],
+                params: {
+                    results: 1
+                }
+            }, {
+                boundsAutoApply: true // Автоматически применяем границы
+            });
+
+            myMap.geoObjects.add(multiRoute);
+            routeLine = multiRoute; // Сохраняем маршрут для дальнейшего использования
+        }
+
+        function searchPlaces(query) {
+            const searchControl = new ymaps.control.SearchControl({
+                provider: new ymaps.geocode.Provider({
+                    results: 5 // Количество результатов
+                }),
+                options: {
+                    float: 'right'
+                }
+            });
+
+            myMap.controls.add(searchControl);
+
+            searchControl.search(query).then(function (res) {
+                const firstGeoObject = res.geoObjects.get(0);
+                if (firstGeoObject) {
+                    myMap.setCenter(firstGeoObject.geometry.coordinates);
+                    myMap.setZoom(14);
+                    alert('Найдено: ' + firstGeoObject.properties.get('name'));
+                } else {
+                    alert('Место не найдено.');
+                }
+            }).catch(function (error) {
+                console.error('Ошибка поиска:', error);
+                alert('Произошла ошибка при поиске: ' + error.message);
+            });
+        }
+    </script>
+</body>
+</html>
